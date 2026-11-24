@@ -9,5 +9,66 @@ body,
 }
 
 body {
-  @apply bg-slate-100 text-slate-900 antialiased;
+  @apply bg-[#070a12] font-sans text-slate-200 antialiased;
+  color-scheme: dark;
+}
+
+/* Subtle ambient glow behind the chat area */
+.glow-bg {
+  background:
+    radial-gradient(60rem 30rem at 70% -10%, rgba(99, 102, 241, 0.08), transparent 60%),
+    radial-gradient(50rem 28rem at 20% -15%, rgba(139, 92, 246, 0.07), transparent 55%);
+}
+
+/* Thin dark scrollbars */
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(51 65 85 / 0.6) transparent;
+}
+.scroll-slim::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-700/60;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Typing indicator dots */
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Message entrance */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.message-in {
+  animation: message-in 0.25s ease-out both;
 }

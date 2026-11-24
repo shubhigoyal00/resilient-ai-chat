@@ -1,55 +1,76 @@
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Cpu,
+  Database,
+  KeyRound,
+  RefreshCw,
+  Timer,
+  Zap,
+} from "lucide-react";
 import type { ChatMetadata } from "../services/api";
 
 function SourceBadge({ source }: { source: ChatMetadata["resolution_source"] }) {
   const isLive = source === "LIVE_INFERENCE";
+  const Icon = isLive ? Zap : Database;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset ${
         isLive
-          ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
-          : "bg-violet-100 text-violet-700 ring-1 ring-violet-200"
+          ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30"
+          : "bg-violet-500/10 text-violet-300 ring-violet-500/30"
       }`}
     >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-emerald-500" : "bg-violet-500"}`}
-      />
-      {isLive ? "LIVE INFERENCE" : "LLM CACHE"}
+      <Icon className="h-3 w-3" />
+      {isLive ? "Live Inference" : "LLM Cache"}
     </span>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: typeof Cpu;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+      <span className="text-slate-500">{label}</span>
+      <span className="font-mono text-slate-300">{children}</span>
+    </div>
   );
 }
 
 export default function MetadataPanel({ metadata }: { metadata: ChatMetadata }) {
   return (
-    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="mb-1.5" data-testid="meta-source">
+    <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3.5 py-2.5 text-[11px]">
+      <span data-testid="meta-source">
         <SourceBadge source={metadata.resolution_source} />
-      </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] sm:grid-cols-4">
-        <div>
-          <dt className="font-medium uppercase tracking-wide text-slate-400">Model</dt>
-          <dd className="truncate font-mono text-slate-700" data-testid="meta-model">
-            {metadata.model}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium uppercase tracking-wide text-slate-400">Latency</dt>
-          <dd className="font-mono text-slate-700" data-testid="meta-latency">
-            {metadata.latency_ms} ms
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium uppercase tracking-wide text-slate-400">Input tokens</dt>
-          <dd className="font-mono text-slate-700" data-testid="meta-input-tokens">
-            {metadata.input_tokens}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium uppercase tracking-wide text-slate-400">Output tokens</dt>
-          <dd className="font-mono text-slate-700" data-testid="meta-output-tokens">
-            {metadata.output_tokens}
-          </dd>
-        </div>
-      </dl>
+      </span>
+      <Stat icon={Cpu} label="Model">
+        <span data-testid="meta-model">{metadata.model}</span>
+      </Stat>
+      <Stat icon={Timer} label="Latency">
+        <span data-testid="meta-latency">{metadata.latency_ms} ms</span>
+      </Stat>
+      <Stat icon={ArrowDownToLine} label="In">
+        <span data-testid="meta-input-tokens">{metadata.input_tokens}</span>
+      </Stat>
+      <Stat icon={ArrowUpFromLine} label="Out">
+        <span data-testid="meta-output-tokens">{metadata.output_tokens}</span>
+      </Stat>
+      {metadata.key_id !== null && (
+        <Stat icon={KeyRound} label="Key">
+          {metadata.key_id}
+        </Stat>
+      )}
+      <Stat icon={RefreshCw} label="Fallbacks">
+        {metadata.fallback_attempts}
+      </Stat>
     </div>
   );
 }

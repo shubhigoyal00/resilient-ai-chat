@@ -1,4 +1,5 @@
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { ArrowUp } from "lucide-react";
 
 interface Props {
   onSend: (message: string) => Promise<boolean>;
@@ -7,48 +8,66 @@ interface Props {
 
 export default function Composer({ onSend, disabled }: Props) {
   const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     const text = value.trim();
     if (!text || disabled) return;
     const sent = await onSend(text);
-    if (sent) setValue(""); // clear only after a successful send
+    if (sent) {
+      setValue("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+    }
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void submit();
     }
   };
 
+  const autoResize = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
   return (
-    <form
-      onSubmit={submit}
-      className="border-t border-slate-200 bg-white px-4 py-3 sm:px-6"
-    >
-      <div className="mx-auto flex max-w-3xl items-center gap-2">
-        <input
-          data-testid="chat-input"
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Type your message…"
-          disabled={disabled}
-          maxLength={4000}
-          className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-2 focus:ring-slate-200 disabled:opacity-60"
-        />
-        <button
-          data-testid="send-button"
-          type="submit"
-          disabled={disabled || !value.trim()}
-          className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Send
-        </button>
+    <form onSubmit={submit} className="border-t border-slate-800/70 bg-[#0a0e1a]/80 px-4 py-3.5 backdrop-blur sm:px-6">
+      <div className="mx-auto flex max-w-3xl items-end gap-2.5">
+        <div className="flex flex-1 items-end rounded-2xl border border-slate-700/70 bg-slate-900/80 transition focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/20">
+          <textarea
+            ref={textareaRef}
+            data-testid="chat-input"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              autoResize();
+            }}
+            onKeyDown={onKeyDown}
+            placeholder="Message Resilient AI…"
+            disabled={disabled}
+            maxLength={4000}
+            rows={1}
+            className="scroll-slim max-h-40 flex-1 resize-none bg-transparent px-4 py-3 text-sm text-slate-100 placeholder-slate-500 outline-none disabled:opacity-60"
+          />
+          <button
+            data-testid="send-button"
+            type="submit"
+            disabled={disabled || !value.trim()}
+            aria-label="Send message"
+            className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-950/40 transition hover:from-indigo-400 hover:to-violet-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:shadow-none"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        </div>
       </div>
+      <p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-600">
+        Enter to send · Shift+Enter for a new line
+      </p>
     </form>
   );
 }
