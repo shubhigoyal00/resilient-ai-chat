@@ -73,8 +73,11 @@ class TestLiteLLMCache:
         assert r.json()["metadata"]["resolution_source"] == "LIVE_INFERENCE"
         assert len(provider_spy) == 2
 
-    def test_cache_hit_is_faster_than_live(self, client, provider_spy):
+    def test_cache_hit_skips_provider(self, client, provider_spy):
+        # The real speed win is that no provider call happens on a hit;
+        # asserting on wall-time would be flaky for in-process calls.
         r1 = post_chat(client, session_id="s-fast-1", message="Hello")
         r2 = post_chat(client, session_id="s-fast-2", message="Hello")
+        assert r1.json()["metadata"]["resolution_source"] == "LIVE_INFERENCE"
         assert r2.json()["metadata"]["resolution_source"] == "LLM_CACHE"
-        assert r2.json()["metadata"]["latency_ms"] <= r1.json()["metadata"]["latency_ms"]
+        assert len(provider_spy) == 1

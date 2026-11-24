@@ -4,11 +4,14 @@ Every real LLM call goes through ``litellm.acompletion``. Caching is handled
 by LiteLLM's built-in in-memory cache (configured in cache_service).
 """
 
+import logging
 import time
 
 import litellm
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 # Statuses supported by the X-Simulate-Failure header.
 SIMULATED_STATUSES = {429, 500, 502, 503}
@@ -103,6 +106,10 @@ async def generate_reply(
             )
         except Exception as exc:  # 429 / quota / 5xx / network -> next key
             last_error = exc
+            # Never log the secret itself — only the key identifier and error.
+            logger.warning(
+                "[LiteLLM ERROR] %s: %s: %s", key_id, type(exc).__name__, exc
+            )
             fallback_attempts += 1
             continue
 
