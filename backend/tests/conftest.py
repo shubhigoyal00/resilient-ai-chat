@@ -10,7 +10,7 @@ import tempfile
 _TEST_DB = os.path.join(tempfile.gettempdir(), "resilient_chat_test.db")
 
 os.environ.setdefault("LLM_API_KEYS", "test-secret-1,test-secret-2")
-os.environ.setdefault("GEMINI_MODEL", "gemini/gemini-2.5-flash")
+os.environ.setdefault("GEMINI_MODEL", "gemini/gemini-3.5-flash-lite")
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
 os.environ.setdefault("ALLOWED_ORIGINS", "http://localhost:3000")
 os.environ.setdefault("ENABLE_FAILURE_SIMULATION", "true")
@@ -28,7 +28,7 @@ from app.models import Session as SessionRow  # noqa: E402
 
 
 def make_model_response(text: str, prompt_tokens: int = 10, output_tokens: int = 5) -> ModelResponse:
-    r = ModelResponse(model="gemini/gemini-2.5-flash")
+    r = ModelResponse(model="gemini/gemini-3.5-flash-lite")
     r.choices = [Choices(index=0, message=Message(role="assistant", content=text))]
     r.usage = Usage(
         prompt_tokens=prompt_tokens,

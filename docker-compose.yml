@@ -5,7 +5,7 @@ services:
       - "8000:8000"
     environment:
       LLM_API_KEYS: ${LLM_API_KEYS:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini/gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini/gemini-3.5-flash-lite}
       DATABASE_URL: sqlite:////data/app.db
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
       ENABLE_FAILURE_SIMULATION: ${ENABLE_FAILURE_SIMULATION:-true}

@@ -1,24 +1,23 @@
-# Render blueprint: deploys the FastAPI backend with a persistent /data disk.
-# Deploy the frontend separately on Vercel (see README).
+# Render blueprint matching the deployed Python web service.
+# NOTE: free instances have an ephemeral filesystem — the SQLite file does
+# NOT survive restarts/redeploys. See README "SQLite persistence".
 services:
   - type: web
     name: resilient-ai-chat-api
-    runtime: docker
+    runtime: python
     rootDir: backend
     plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    disk:
-      name: chat-sqlite-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: LLM_API_KEYS
-        sync: false
+        sync: false # comma-separated Gemini keys -> key_1, key_2
       - key: GEMINI_MODEL
-        value: gemini/gemini-2.5-flash
+        value: gemini/gemini-3.5-flash-lite
       - key: DATABASE_URL
-        value: sqlite:////data/app.db
+        value: sqlite:///./app.db # ephemeral file on the instance filesystem
       - key: ALLOWED_ORIGINS
-        sync: false # set to your Vercel URL, e.g. https://your-app.vercel.app
+        sync: false # e.g. https://resilient-ai-chat-frontend.vercel.app
       - key: ENABLE_FAILURE_SIMULATION
         value: "true"

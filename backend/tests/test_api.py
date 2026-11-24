@@ -22,7 +22,7 @@ def provider_error(status: int):
     try:
         return litellm.APIError(
             status_code=status, message="provider error",
-            llm_provider="gemini", model="gemini/gemini-2.5-flash",
+            llm_provider="gemini", model="gemini/gemini-3.5-flash-lite",
         )
     except TypeError:
         exc = Exception("provider error")
@@ -90,7 +90,7 @@ class TestChat:
         assert body["reply"] == "Hi there!"
         meta = body["metadata"]
         assert meta["resolution_source"] == "LIVE_INFERENCE"
-        assert meta["model"] == "gemini/gemini-2.5-flash"
+        assert meta["model"] == "gemini/gemini-3.5-flash-lite"
         assert isinstance(meta["latency_ms"], int)
         assert meta["input_tokens"] == 42
         assert meta["output_tokens"] == 9

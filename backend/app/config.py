@@ -12,8 +12,8 @@ class Settings(BaseSettings):
 
     # Comma-separated Gemini API keys, e.g. "key1,key2" -> key_1, key_2
     llm_api_keys: str = ""
-    # LiteLLM model string, e.g. "gemini/gemini-2.5-flash"
-    gemini_model: str = "gemini/gemini-2.5-flash"
+    # LiteLLM model string, e.g. "gemini/gemini-3.5-flash-lite"
+    gemini_model: str = "gemini/gemini-3.5-flash-lite"
     # SQLAlchemy database URL. Must support sqlite:////data/app.db
     database_url: str = "sqlite:////data/app.db"
     # Comma-separated CORS origins
