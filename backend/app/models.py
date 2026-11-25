@@ -36,3 +36,22 @@ class Message(Base):
     # "metadata" is reserved on Declarative bases, so map the attribute differently.
     msg_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+
+
+class Attachment(Base):
+    """An uploaded file associated with a session.
+
+    Images keep their base64 content; documents keep extracted text.
+    Linked to the consuming message via the message's metadata.
+    """
+
+    __tablename__ = "attachments"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)  # "image" | "document"
+    content_b64: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)

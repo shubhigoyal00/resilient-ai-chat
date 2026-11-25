@@ -5,31 +5,9 @@ is patched — LiteLLM's caching handler runs for real, so cache-hit
 detection reflects actual library behavior on the installed version.
 """
 
-import litellm.main
 import pytest
-from fastapi.testclient import TestClient
 
-from tests.conftest import make_model_response, post_chat
-
-
-@pytest.fixture
-def provider_spy(monkeypatch):
-    """Patch the Gemini provider dispatch inside LiteLLM; count real calls."""
-    calls = []
-
-    def fake_completion(**kwargs):
-        calls.append(kwargs)
-
-        async def _coro():
-            return make_model_response("CACHED REPLY", prompt_tokens=42, output_tokens=9)
-
-        return _coro() if kwargs.get("acompletion") else _sync()
-
-    def _sync():
-        return make_model_response("CACHED REPLY", prompt_tokens=42, output_tokens=9)
-
-    monkeypatch.setattr(litellm.main.vertex_chat_completion, "completion", fake_completion)
-    return calls
+from tests.conftest import post_chat
 
 
 class TestLiteLLMCache:

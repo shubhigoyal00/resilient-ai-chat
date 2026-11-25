@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import chat, health, sessions
+from app.routers import attachments, chat, health, sessions
 from app.services.cache_service import configure_cache
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(sessions.router)
+app.include_router(attachments.router)
 
 
 @app.on_event("startup")

@@ -18,13 +18,32 @@ export interface ChatResponse {
   metadata: ChatMetadata;
 }
 
+/** Attachment reference stored on user messages / used for rendering. */
+export interface AttachmentRef {
+  id: string;
+  filename: string;
+  mime_type: string;
+  kind: "image" | "document";
+}
+
 export interface StoredMessage {
   id: number;
   session_id: string;
   role: "user" | "assistant";
   content: string;
-  metadata: ChatMetadata | null;
+  metadata:
+    | (ChatMetadata & { attachments?: AttachmentRef[] })
+    | { attachments?: AttachmentRef[] }
+    | null;
   created_at: string;
+}
+
+export interface UploadedAttachment {
+  attachment_id: string;
+  filename: string;
+  mime_type: string;
+  kind: "image" | "document";
+  text_chars: number | null;
 }
 
 export class ApiError extends Error {
@@ -50,10 +69,29 @@ async function parseError(res: Response): Promise<never> {
   throw new ApiError(res.status, detail);
 }
 
+export function attachmentRawUrl(id: string): string {
+  return `${BASE_URL}/attachments/${encodeURIComponent(id)}/raw`;
+}
+
+export async function uploadAttachment(
+  sessionId: string,
+  file: File,
+): Promise<UploadedAttachment> {
+  const form = new FormData();
+  form.append("session_id", sessionId);
+  form.append("file", file);
+  const res = await fetch(`${BASE_URL}/attachments`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) await parseError(res);
+  return (await res.json()) as UploadedAttachment;
+}
+
 export async function sendChat(
   sessionId: string,
   message: string,
-  systemPrompt?: string,
+  opts?: { systemPrompt?: string; attachmentIds?: string[] },
 ): Promise<ChatResponse> {
   const res = await fetch(`${BASE_URL}/chat`, {
     method: "POST",
@@ -61,7 +99,10 @@ export async function sendChat(
     body: JSON.stringify({
       session_id: sessionId,
       message,
-      ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
+      ...(opts?.systemPrompt ? { system_prompt: opts.systemPrompt } : {}),
+      ...(opts?.attachmentIds?.length
+        ? { attachment_ids: opts.attachmentIds }
+        : {}),
     }),
   });
   if (!res.ok) await parseError(res);

@@ -8,6 +8,7 @@ import {
   ApiError,
   fetchMessages,
   sendChat,
+  type AttachmentRef,
   type StoredMessage,
 } from "../services/api";
 
@@ -21,12 +22,23 @@ const newSession = () => `s-${newId()}`;
 const titleFor = (text: string) =>
   text.length > 42 ? `${text.slice(0, 42).trimEnd()}…` : text;
 
-const toDisplay = (m: StoredMessage): DisplayMessage => ({
-  id: `db-${m.id}`,
-  role: m.role,
-  content: m.content,
-  metadata: m.metadata ?? undefined,
-});
+const toDisplay = (m: StoredMessage): DisplayMessage => {
+  const meta = m.metadata as Record<string, unknown> | null;
+  if (m.role === "user") {
+    return {
+      id: `db-${m.id}`,
+      role: m.role,
+      content: m.content,
+      attachments: (meta?.attachments as AttachmentRef[] | undefined) ?? undefined,
+    };
+  }
+  return {
+    id: `db-${m.id}`,
+    role: m.role,
+    content: m.content,
+    metadata: (meta as unknown as DisplayMessage["metadata"]) ?? undefined,
+  };
+};
 
 export default function ChatPage() {
   // Fresh session on every page load; conversations started this session
@@ -67,16 +79,23 @@ export default function ChatPage() {
 
   /** Core send path; addUserBubble=false is used by Retry (user bubble exists). */
   const send = useCallback(
-    async (sid: string, text: string, addUserBubble: boolean): Promise<boolean> => {
+    async (
+      sid: string,
+      text: string,
+      addUserBubble: boolean,
+      attachments: AttachmentRef[] = [],
+    ): Promise<boolean> => {
       setLoading(true);
       if (addUserBubble) {
         updateSessionMessages(sid, (prev) => [
           ...prev,
-          { id: `u-${newId()}`, role: "user", content: text },
+          { id: `u-${newId()}`, role: "user", content: text, attachments },
         ]);
       }
       try {
-        const res = await sendChat(sid, text);
+        const res = await sendChat(sid, text, {
+          attachmentIds: attachments.map((a) => a.id),
+        });
         updateSessionMessages(sid, (prev) => [
           ...prev,
           {
@@ -107,7 +126,8 @@ export default function ChatPage() {
   );
 
   const handleSend = useCallback(
-    (text: string) => send(sessionId, text, true),
+    (text: string, attachments: AttachmentRef[] = []) =>
+      send(sessionId, text, true, attachments),
     [send, sessionId],
   );
 
@@ -201,7 +221,11 @@ export default function ChatPage() {
             onRetry={handleRetry}
           />
         </main>
-        <Composer onSend={handleSend} disabled={loading} />
+        <Composer
+          onSend={handleSend}
+          disabled={loading}
+          sessionId={sessionId}
+        />
       </div>
     </div>
   );

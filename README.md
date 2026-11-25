@@ -1,9 +1,11 @@
 # Resilient AI Chat
 
-A production-ready AI chatbot: **React + Vite + TypeScript + Tailwind** frontend,
-**FastAPI + LiteLLM + Google Gemini** backend, **SQLite (SQLAlchemy)** persistence,
-and LiteLLM's **built-in in-memory cache**. The backend keeps a pool of Gemini API
-keys and automatically fails over between them on `429` / quota-exhaustion / `5xx`.
+A production-ready **multimodal** AI chatbot: **React + Vite + TypeScript +
+Tailwind** frontend, **FastAPI + LiteLLM + Google Gemini** backend, **SQLite
+(SQLAlchemy)** persistence, and LiteLLM's **built-in in-memory cache**. It
+understands text, **images** (JPG/JPEG/PNG/WEBP) and **documents** (PDF/DOCX/TXT).
+The backend keeps a pool of Gemini API keys and automatically fails over between
+them on `429` / quota-exhaustion / `5xx` — for text *and* multimodal requests.
 
 ## 1. Live URLs
 
@@ -106,6 +108,29 @@ npm run dev        # serves on http://localhost:3000
 - `GET /sessions/{id}/messages` → chronological array;
   `404 {"detail": "session not found"}` for unknown sessions.
 
+### Attachments / multimodal (`backend/app/`)
+
+- `POST /attachments` (multipart: `session_id`, `file`) validates and stores an
+  upload in the `attachments` table, then `POST /chat` references it via
+  `attachment_ids`.
+- **Validation:** extension whitelist (`jpg/jpeg/png/webp/pdf/docx/txt`), magic
+  bytes for images, real parse attempts for PDF/DOCX/TXT, `413` over
+  `MAX_UPLOAD_MB`, `422` for invalid/empty/unreadable files. Everything is
+  processed in memory — no temp files, no path traversal surface.
+- **Images** are sent to Gemini as `image_url` data-URI content parts via
+  LiteLLM (screenshot OCR, diagrams, charts — any vision question works).
+- **Documents** are text-extracted server-side (pypdf for PDF, stdlib
+  zipfile+XML for DOCX, UTF-8 decode for TXT) and injected as labelled context
+  with an instruction to answer *from the document*. Extraction is capped at
+  `MAX_DOC_CHARS` with an explicit truncation marker.
+- Attachments are re-attached when history is replayed, so follow-up questions
+  keep image/document context — and the LiteLLM cache key naturally includes
+  attachment content, so multimodal requests never share cache with text-only
+  requests.
+- `GET /attachments/{id}/raw` serves stored image bytes (frontend previews).
+- Attachment refs (`id`, `filename`, `mime_type`, `kind`) are stored in the user
+  message's metadata so `GET /sessions/{id}/messages` shows what was attached.
+
 ### Where the SQLite file lives
 
 - **Local / Docker Compose:** `DATABASE_URL=sqlite:////data/app.db` with the
@@ -182,6 +207,8 @@ curl https://resilient-ai-chat-api.onrender.com/sessions/unknown/messages
 
 ## 6. Bonus features
 
+- **Multimodal input**: image understanding (JPG/PNG/WEBP) and document Q&A
+  (PDF/DOCX/TXT) through the same resilient Gemini pipeline.
 - Per-session `system_prompt` override persisted server-side.
 - Premium dark SaaS-style UI: sidebar with per-page-load conversation history,
   markdown-rendered replies, suggested prompts, error retry, mobile overlay
@@ -202,6 +229,9 @@ curl https://resilient-ai-chat-api.onrender.com/sessions/unknown/messages
 | `DATABASE_URL` | SQLAlchemy URL | `sqlite:////data/app.db` (volume) / `sqlite:///./app.db` (ephemeral) |
 | `ALLOWED_ORIGINS` | CORS origins (comma-separated) | `https://resilient-ai-chat-frontend.vercel.app` |
 | `ENABLE_FAILURE_SIMULATION` | Enable `X-Simulate-Failure` header | `true` |
+| `MAX_UPLOAD_MB` | Per-file upload size cap | `10` |
+| `MAX_DOC_CHARS` | Extracted document text cap sent to the model | `40000` |
+| `MAX_ATTACHMENTS_PER_MESSAGE` | Attachment limit per chat request | `5` |
 | `VITE_API_BASE_URL` | Backend URL baked into the frontend bundle | `https://resilient-ai-chat-api.onrender.com` |
 
 ## API endpoints
@@ -209,8 +239,31 @@ curl https://resilient-ai-chat-api.onrender.com/sessions/unknown/messages
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/health` | `{"status":"ok","keys_configured":2,"cache_enabled":true}` |
-| `POST` | `/chat` | `{session_id, message, system_prompt?}` → `{session_id, reply, metadata}` |
+| `POST` | `/chat` | `{session_id, message, system_prompt?, attachment_ids?}` → `{session_id, reply, metadata}` |
+| `POST` | `/attachments` | multipart `session_id` + `file` → `{attachment_id, filename, mime_type, kind, text_chars}` (201) |
+| `GET` | `/attachments/{id}/raw` | Stored image bytes (`404` for documents/unknown ids) |
 | `GET` | `/sessions/{id}/messages` | Chronological message array; `404` if unknown |
+
+Upload errors: `422` unsupported type / invalid content / empty file / no
+extractable text, `413` over `MAX_UPLOAD_MB`.
+
+### Upload a file from the CLI
+
+```bash
+# 1) Upload (image or document)
+curl -X POST https://resilient-ai-chat-api.onrender.com/attachments \
+  -F "session_id=demo" -F "file=@chart.png;type=image/png"
+# -> {"attachment_id":"<id>", ...}
+
+# 2) Reference it in /chat
+curl -X POST https://resilient-ai-chat-api.onrender.com/chat \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"demo","message":"Explain this diagram.","attachment_ids":["<id>"]}'
+```
+
+In the UI: click the paperclip, pick a file (image preview / document card
+appears), optionally remove it, then send. Try *"Extract all text from this
+screenshot"* or *"Summarize this document."*
 
 API docs routes (`/docs`, `/openapi.json`) are intentionally disabled to keep
 the public surface to exactly these endpoints.
@@ -219,7 +272,8 @@ the public surface to exactly these endpoints.
 
 ```bash
 cd backend
-pytest -q        # 32 tests: validation, fallback, simulation, real LiteLLM cache
+pytest -q        # 54 tests: validation, fallback, simulation, real LiteLLM
+                 # cache, uploads, multimodal chat, cache/fallback parity
 ```
 
 Cache tests patch only the provider dispatch *inside* LiteLLM

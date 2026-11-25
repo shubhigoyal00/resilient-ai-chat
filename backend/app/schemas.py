@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     session_id: str = Field(..., min_length=1, max_length=128)
     message: str
     system_prompt: str | None = Field(default=None, max_length=4000)
+    attachment_ids: list[str] | None = Field(default=None, max_length=5)
 
     @field_validator("session_id")
     @classmethod

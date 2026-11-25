@@ -1,9 +1,9 @@
-"""SQLite-backed persistence for sessions and messages."""
+"""SQLite-backed persistence for sessions, messages, and attachments."""
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as OrmSession
 
-from app.models import Message, Session
+from app.models import Attachment, Message, Session
 
 
 def session_exists(db: OrmSession, session_id: str) -> bool:
@@ -24,6 +24,19 @@ def get_history(db: OrmSession, session_id: str) -> list[Message]:
     return list(db.scalars(stmt))
 
 
+def get_attachments(db: OrmSession, ids: list[str], session_id: str) -> list[Attachment]:
+    """Fetch attachments by id, scoped to the session. Order preserved."""
+    if not ids:
+        return []
+    rows = db.scalars(
+        select(Attachment).where(
+            Attachment.id.in_(ids), Attachment.session_id == session_id
+        )
+    ).all()
+    by_id = {a.id: a for a in rows}
+    return [by_id[i] for i in ids if i in by_id]
+
+
 def save_exchange(
     db: OrmSession,
     session_id: str,
@@ -31,6 +44,7 @@ def save_exchange(
     assistant_content: str,
     assistant_metadata: dict,
     system_prompt: str | None,
+    user_metadata: dict | None = None,
 ) -> None:
     """Persist a successful exchange. Called ONLY after successful inference,
     so failed requests never modify conversation history."""
@@ -41,7 +55,14 @@ def save_exchange(
     elif system_prompt is not None:
         session.system_prompt = system_prompt
 
-    db.add(Message(session_id=session_id, role="user", content=user_content))
+    db.add(
+        Message(
+            session_id=session_id,
+            role="user",
+            content=user_content,
+            msg_metadata=user_metadata,
+        )
+    )
     db.add(
         Message(
             session_id=session_id,

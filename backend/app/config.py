@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     enable_failure_simulation: bool = False
     # Default system prompt when a request/session does not override it
     default_system_prompt: str = "You are a helpful assistant."
+    # Upload limits
+    max_upload_mb: float = 10.0
+    max_doc_chars: int = 40000  # extracted document text cap sent to the model
+    max_attachments_per_message: int = 5
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return int(self.max_upload_mb * 1024 * 1024)
 
     @property
     def key_pool(self) -> list[tuple[str, str]]:

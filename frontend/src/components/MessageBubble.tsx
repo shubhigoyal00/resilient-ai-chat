@@ -1,5 +1,6 @@
 import { AlertTriangle, RotateCcw, Sparkles } from "lucide-react";
-import type { ChatMetadata } from "../services/api";
+import type { AttachmentRef, ChatMetadata } from "../services/api";
+import AttachmentChips from "./AttachmentChips";
 import Markdown from "./Markdown";
 import MetadataPanel from "./MetadataPanel";
 
@@ -8,6 +9,7 @@ export interface DisplayMessage {
   role: "user" | "assistant" | "error";
   content: string;
   metadata?: ChatMetadata;
+  attachments?: AttachmentRef[];
   retryText?: string;
 }
 
@@ -21,6 +23,7 @@ export default function MessageBubble({ message, onRetry }: Props) {
     return (
       <div className="message-in flex justify-end">
         <div className="max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-600 to-indigo-700 px-4 py-2.5 text-sm leading-relaxed text-white shadow-lg shadow-indigo-950/30 sm:max-w-[75%]">
+          <AttachmentChips attachments={message.attachments ?? []} />
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
         </div>
       </div>
